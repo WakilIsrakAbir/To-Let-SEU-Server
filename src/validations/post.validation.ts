@@ -26,9 +26,16 @@ const basePostFields = {
   availableFromMonth: z.string().optional().default('Immediate'),
   seatCount: z.number().optional().default(1),
   roomType: z
-    .enum(['Single Room', 'Shared Seat', 'Sublet', 'Master Bed'])
+    .enum([
+      '2 Person Room',
+      '3 Person Room',
+      'Single Room',
+      'Sublet',
+      'Shared Seat',
+      'Master Bed',
+    ])
     .optional()
-    .default('Shared Seat'),
+    .default('2 Person Room'),
 
   description: z.string().optional().default(''),
 

@@ -23,7 +23,7 @@ export interface IPostDocument extends Document {
   gender: 'Male' | 'Female';
   availableFromMonth: string;
   seatCount: number;
-  roomType: 'Single Room' | 'Shared Seat' | 'Sublet' | 'Master Bed';
+  roomType: '2 Person Room' | '3 Person Room' | 'Single Room' | 'Sublet' | 'Shared Seat' | 'Master Bed';
 
   description: string;
 
@@ -132,8 +132,15 @@ const PostSchema = new Schema<IPostDocument>(
     },
     roomType: {
       type: String,
-      enum: ['Single Room', 'Shared Seat', 'Sublet', 'Master Bed'],
-      default: 'Shared Seat',
+      enum: [
+        '2 Person Room',
+        '3 Person Room',
+        'Single Room',
+        'Sublet',
+        'Shared Seat',
+        'Master Bed',
+      ],
+      default: '2 Person Room',
     },
     description: {
       type: String,
