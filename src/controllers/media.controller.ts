@@ -9,8 +9,8 @@ export const getUploadSignature = (
   res: Response,
   _next: NextFunction
 ) => {
-  const folder = (req.query.folder as string) || 'seu-basa/listings';
-  const signData = generateUploadSignature(folder);
+  const folderOrType = (req.query.type as string) || (req.query.folder as string) || 'image';
+  const signData = generateUploadSignature(folderOrType);
 
   return sendResponse({
     res,
