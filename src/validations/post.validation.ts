@@ -79,4 +79,8 @@ export const createPostSchema = z.object({
     ),
 });
 
-export const updatePostSchema = createPostSchema.partial();
+export const updatePostSchema = createPostSchema
+  .extend({
+    status: z.enum(['active', 'booked', 'archived']).optional(),
+  })
+  .partial();
