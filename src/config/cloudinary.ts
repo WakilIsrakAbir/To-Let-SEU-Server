@@ -12,7 +12,7 @@ export const CLOUDINARY_FOLDERS = {
   ROOT: 'to-let-seu',
   POST_IMAGES: 'to-let-seu/posts/images',
   POST_VIDEOS: 'to-let-seu/posts/videos',
-  USER_AVATARS: 'to-let-seu/users/avatars',
+  USER_AVATARS: 'to-let-seu/profile-pictures',
 } as const;
 
 export const CLOUDINARY_LIMITS = {
@@ -23,12 +23,16 @@ export const CLOUDINARY_LIMITS = {
 };
 
 export const generateUploadSignature = (
-  folderOrType: 'image' | 'video' | 'avatar' | string = 'image'
+  folderOrType: 'image' | 'video' | 'avatar' | 'profile-picture' | string = 'image'
 ) => {
   let folder: string;
   if (folderOrType === 'video') {
     folder = CLOUDINARY_FOLDERS.POST_VIDEOS;
-  } else if (folderOrType === 'avatar') {
+  } else if (
+    folderOrType === 'avatar' ||
+    folderOrType === 'profile-picture' ||
+    folderOrType === 'profile-pictures'
+  ) {
     folder = CLOUDINARY_FOLDERS.USER_AVATARS;
   } else if (folderOrType === 'image') {
     folder = CLOUDINARY_FOLDERS.POST_IMAGES;

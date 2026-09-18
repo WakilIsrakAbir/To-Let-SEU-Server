@@ -17,8 +17,17 @@ export const createPost = async (
 
     const postData = {
       ...req.body,
+      title: req.body.title?.trim() || 'Bachelor Seat / Room',
+      department: req.body.department || req.user.department || 'General',
+      contactNumber: req.body.contactNumber || req.user.phone || 'N/A',
+      area: req.body.area || 'Tejgaon (Near SEU Campus)',
+      addressDetails: req.body.addressDetails || 'Near Campus Area',
+      rentAmount: Number(req.body.rentAmount) || 0,
+      seatCount: Number(req.body.seatCount) || 1,
+      gender: req.body.gender || 'Male',
+      availableFromMonth: req.body.availableFromMonth || 'Immediate',
+      description: req.body.description || '',
       author: req.user._id,
-      department: req.body.department || req.user.department,
     };
 
     const post = await Post.create(postData);
@@ -58,10 +67,49 @@ export const getPosts = async (
 
     const filterQuery: any = { status: 'active' };
 
-    // Area filter (case-insensitive substring or match)
+    // Area filter (handles predefined campus areas and "Other" / custom areas)
     if (area && typeof area === 'string' && area !== 'All') {
-      const areaList = area.split(',').map((a) => a.trim());
-      filterQuery.area = { $in: areaList.map((a) => new RegExp(a, 'i')) };
+      const areaList = area.split(',').map((a) => a.trim()).filter(Boolean);
+      const hasOther = areaList.some((a) => a.toLowerCase() === 'other');
+      const specificAreas = areaList.filter((a) => a.toLowerCase() !== 'other');
+
+      const STANDARD_CAMPUS_AREAS = [
+        'Tejgaon',
+        'Mohakhali',
+        'Banani',
+        'Nakhalpara',
+        'Farmgate',
+        'Bijoy Sarani',
+        'Monipuripara',
+        'Panthapath',
+        'Mirpur',
+      ];
+
+      const orBranches: any[] = [];
+
+      if (specificAreas.length > 0) {
+        const specificRegexes = specificAreas.map(
+          (a) => new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        );
+        orBranches.push({ area: { $in: specificRegexes } });
+      }
+
+      if (hasOther) {
+        const standardRegexes = STANDARD_CAMPUS_AREAS.map(
+          (name) => new RegExp(name, 'i')
+        );
+        // Matches posts with area "Other", "Other (...)", or any area outside standard campus areas
+        orBranches.push({ area: /Other/i });
+        orBranches.push({
+          $and: standardRegexes.map((reg) => ({ area: { $not: reg } })),
+        });
+      }
+
+      if (orBranches.length === 1) {
+        Object.assign(filterQuery, orBranches[0]);
+      } else if (orBranches.length > 1) {
+        filterQuery.$or = orBranches;
+      }
     }
 
     // Gender filter
@@ -98,9 +146,27 @@ export const getPosts = async (
       });
     }
 
-    // Text search if provided
-    if (search && typeof search === 'string') {
-      filterQuery.$text = { $search: search };
+    // Flexible regex search across title, description, area, addressDetails, roomType
+    if (search && typeof search === 'string' && search.trim()) {
+      const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const searchConditions = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { area: searchRegex },
+        { addressDetails: searchRegex },
+        { roomType: searchRegex },
+        { department: searchRegex },
+      ];
+
+      if (filterQuery.$or) {
+        filterQuery.$and = [
+          { $or: filterQuery.$or },
+          { $or: searchConditions },
+        ];
+        delete filterQuery.$or;
+      } else {
+        filterQuery.$or = searchConditions;
+      }
     }
 
     // Sorting

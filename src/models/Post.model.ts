@@ -69,7 +69,7 @@ const PostSchema = new Schema<IPostDocument>(
   {
     title: {
       type: String,
-      required: [true, 'Post title is required'],
+      default: 'Bachelor Seat / Room',
       trim: true,
     },
     author: {
@@ -79,26 +79,28 @@ const PostSchema = new Schema<IPostDocument>(
     },
     department: {
       type: String,
-      required: [true, 'SEU Department is required'],
+      default: 'General',
     },
     contactNumber: {
       type: String,
-      required: [true, 'Contact number is required'],
+      default: 'N/A',
     },
     whatsappNumber: {
       type: String,
+      default: '',
     },
     area: {
       type: String,
-      required: [true, 'Area is required'],
+      default: 'Tejgaon (Near SEU Campus)',
       trim: true,
     },
     addressDetails: {
       type: String,
-      required: [true, 'Address details are required'],
+      default: 'Near Campus Area',
     },
     distanceFromCampus: {
       type: String,
+      default: '',
     },
     rentType: {
       type: String,
@@ -107,8 +109,8 @@ const PostSchema = new Schema<IPostDocument>(
     },
     rentAmount: {
       type: Number,
-      required: [true, 'Rent amount is required'],
       min: [0, 'Rent amount cannot be negative'],
+      default: 0,
     },
     serviceChargeIncluded: {
       type: Boolean,
@@ -117,15 +119,14 @@ const PostSchema = new Schema<IPostDocument>(
     gender: {
       type: String,
       enum: ['Male', 'Female'],
-      required: [true, 'Gender preference is required'],
+      default: 'Male',
     },
     availableFromMonth: {
       type: String,
-      required: [true, 'Available from month is required'],
+      default: 'Immediate',
     },
     seatCount: {
       type: Number,
-      required: [true, 'Seat count is required'],
       min: [1, 'At least 1 seat must be offered'],
       default: 1,
     },
@@ -136,7 +137,7 @@ const PostSchema = new Schema<IPostDocument>(
     },
     description: {
       type: String,
-      required: [true, 'Description is required'],
+      default: '',
     },
     amenities: {
       khalaMaid: { type: Boolean, default: false },
