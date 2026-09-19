@@ -15,7 +15,23 @@ const app: Application = express();
 // Middlewares
 app.use(
   cors({
-    origin: [ENV.CLIENT_URL, 'http://localhost:3000', 'http://localhost:3001'],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const normalizedClient = ENV.CLIENT_URL ? ENV.CLIENT_URL.replace(/\/$/, '') : '';
+      const allowedOrigins = [
+        normalizedClient,
+        'http://localhost:3000',
+        'http://localhost:3001',
+      ];
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        (normalizedClient && origin.startsWith(normalizedClient))
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
@@ -33,9 +49,9 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
     res,
     statusCode: 200,
     success: true,
-    message: 'SEU Basa API Online and Healthy',
+    message: 'To Let SEU API Online and Healthy',
     data: {
-      platform: 'SEU Basa',
+      platform: 'To Let SEU',
       target: 'Southeast University Students (Bachelor Room Rent)',
       version: '1.0.0',
       timestamp: new Date().toISOString(),

@@ -1,7 +1,7 @@
 {
   "name": "to-let-seu-server",
   "version": "1.0.0",
-  "description": "Backend API for SEU Basa - Bachelor Room Rent System for Southeast University Students",
+  "description": "Backend API for To Let SEU - Bachelor Room Rent System for Southeast University Students",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

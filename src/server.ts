@@ -6,7 +6,7 @@ const startServer = async () => {
   const PORT = Number(ENV.PORT) || 5000;
   app.listen(PORT, () => {
     console.log(`===============================================`);
-    console.log(`🚀 SEU Basa Server running on port ${PORT}`);
+    console.log(`🚀 To Let SEU Server running on port ${PORT}`);
     console.log(`📡 Health check: http://localhost:${PORT}/api/v1/health`);
     console.log(`🌐 Mode: ${ENV.NODE_ENV}`);
     console.log(`===============================================`);
