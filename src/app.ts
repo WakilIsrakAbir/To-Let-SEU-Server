@@ -43,6 +43,21 @@ if (ENV.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
+// Root Welcome & Status Route
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: '🚀 To Let SEU API Server is running successfully on Vercel!',
+    platform: 'To Let SEU',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/v1/health',
+      posts: '/api/v1/posts',
+      auth: '/api/v1/auth',
+    },
+  });
+});
+
 // Health Check Route
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   sendResponse({
