@@ -189,11 +189,14 @@ export const getPosts = async (
         .populate('author', 'name email department avatarUrl phone isVerifiedStudent')
         .sort(sortOptions)
         .skip(skip)
-        .limit(limitNum),
+        .limit(limitNum)
+        .lean(),
       Post.countDocuments(filterQuery),
     ]);
 
     const totalPages = Math.ceil(totalPosts / limitNum);
+
+    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
 
     return sendResponse({
       res,

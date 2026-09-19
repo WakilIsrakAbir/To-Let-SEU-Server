@@ -193,7 +193,10 @@ const PostSchema = new Schema<IPostDocument>(
   }
 );
 
-// Indexes for fast searching and filtering
+// Indexes for fast searching, sorting and filtering
+PostSchema.index({ status: 1, createdAt: -1 });
+PostSchema.index({ status: 1, area: 1 });
+PostSchema.index({ author: 1 });
 PostSchema.index({ area: 1, gender: 1, rentAmount: 1, createdAt: -1 });
 PostSchema.index({ title: 'text', description: 'text', area: 'text' });
 
