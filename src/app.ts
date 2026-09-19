@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
 import { ENV } from './config/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { sendResponse } from './utils/apiResponse';
@@ -60,16 +61,22 @@ app.get('/', (_req: Request, res: Response) => {
 
 // Health Check Route
 app.get('/api/v1/health', (_req: Request, res: Response) => {
+  const isConnected = mongoose.connection.readyState === 1;
   sendResponse({
     res,
     statusCode: 200,
     success: true,
-    message: 'To Let SEU API Online and Healthy',
+    message: isConnected ? 'To Let SEU API Online and Healthy' : 'To Let SEU API Online (Database Disconnected)',
     data: {
       platform: 'To Let SEU',
       target: 'Southeast University Students (Bachelor Room Rent)',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
+      database: {
+        status: isConnected ? 'connected' : 'disconnected',
+        readyState: mongoose.connection.readyState,
+        mongoUriConfigured: Boolean(process.env.MONGO_URI),
+      },
     },
   });
 });
