@@ -7,6 +7,7 @@ import {
   deleteUser,
   deleteAnyPost,
   triggerExpiredPostsCleanup,
+  getExpiredPostsPreview,
 } from '../controllers/admin.controller';
 import { verifyToken } from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/role.middleware';
@@ -22,6 +23,7 @@ router.put('/users/:userId/role', updateUserRole);
 router.put('/users/:userId/verify', toggleVerifyStudent);
 router.delete('/users/:userId', deleteUser);
 router.delete('/posts/:postId', deleteAnyPost);
+router.get('/cleanup-preview', getExpiredPostsPreview);
 router.post('/cleanup-expired-posts', triggerExpiredPostsCleanup);
 
 export default router;

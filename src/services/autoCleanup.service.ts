@@ -21,6 +21,8 @@ export interface ICleanupResult {
  * User accounts are strictly preserved and never deleted by this process.
  */
 export const cleanupExpiredPosts = async (days: number = 60): Promise<ICleanupResult> => {
+  const cleanDays = typeof days === 'number' && !isNaN(days) ? Math.max(0, days) : 60;
+
   if (isCleanupRunning) {
     return {
       success: true,
@@ -28,15 +30,15 @@ export const cleanupExpiredPosts = async (days: number = 60): Promise<ICleanupRe
       deletedPostsCount: 0,
       deletedImagesCount: 0,
       deletedVideosCount: 0,
-      olderThanDays: days,
-      thresholdDate: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString(),
+      olderThanDays: cleanDays,
+      thresholdDate: new Date(Date.now() - cleanDays * 24 * 60 * 60 * 1000).toISOString(),
       durationMs: 0,
     };
   }
 
   isCleanupRunning = true;
   const startTime = Date.now();
-  const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const threshold = new Date(Date.now() - cleanDays * 24 * 60 * 60 * 1000);
 
   let totalImagesDeleted = 0;
   let totalVideosDeleted = 0;

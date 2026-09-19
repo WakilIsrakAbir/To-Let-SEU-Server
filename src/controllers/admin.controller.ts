@@ -231,7 +231,7 @@ export const deleteAnyPost = async (
 };
 
 /**
- * Manually trigger or test the 60-day expired posts auto-cleanup
+ * Manually trigger or test the expired posts auto-cleanup
  */
 export const triggerExpiredPostsCleanup = async (
   req: Request,
@@ -239,7 +239,10 @@ export const triggerExpiredPostsCleanup = async (
   next: NextFunction
 ) => {
   try {
-    const days = Number(req.body?.days) || 60;
+    const days =
+      req.body?.days !== undefined && !isNaN(Number(req.body.days))
+        ? Number(req.body.days)
+        : 60;
     const result = await cleanupExpiredPosts(days);
 
     return sendResponse({
@@ -247,6 +250,40 @@ export const triggerExpiredPostsCleanup = async (
       statusCode: 200,
       message: result.message,
       data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Get count preview of posts that match the auto-purge threshold
+ */
+export const getExpiredPostsPreview = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const days =
+      req.query?.days !== undefined && !isNaN(Number(req.query.days))
+        ? Number(req.query.days)
+        : 60;
+    const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const matchCount = await Post.countDocuments({
+      createdAt: { $lt: threshold },
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      message: `Preview of expired posts (${days} days threshold).`,
+      data: {
+        days,
+        thresholdDate: threshold.toISOString(),
+        matchCount,
+      },
     });
   } catch (error) {
     return next(error);
