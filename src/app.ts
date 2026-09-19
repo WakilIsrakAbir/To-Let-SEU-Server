@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes';
 import postRoutes from './routes/post.routes';
 import mediaRoutes from './routes/media.routes';
 import adminRoutes from './routes/admin.routes';
+import { checkAndRunDailyCleanup } from './services/autoCleanup.service';
 
 const app: Application = express();
 
@@ -39,6 +40,12 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// Non-blocking daily auto-cleanup check (runs at most once every 24 hours)
+app.use((_req, _res, next) => {
+  checkAndRunDailyCleanup();
+  next();
+});
 
 if (ENV.NODE_ENV === 'development') {
   app.use(morgan('dev'));

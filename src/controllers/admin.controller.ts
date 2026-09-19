@@ -3,7 +3,8 @@ import { User } from '../models/User.model';
 import { Post } from '../models/Post.model';
 import { sendResponse } from '../utils/apiResponse';
 import { ApiError } from '../utils/apiError';
-import cloudinary from '../config/cloudinary';
+import { deleteMediaFromCloudinary } from '../utils/cloudinaryCleanup';
+import { cleanupExpiredPosts } from '../services/autoCleanup.service';
 
 export const getAdminStats = async (
   _req: Request,
@@ -25,6 +26,47 @@ export const getAdminStats = async (
       { $limit: 5 },
     ]);
 
+    // Daily posts aggregate for the past 14 days
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
+    fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+    const dailyAggregate = await Post.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: fourteenDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    // Fill in zero counts for any date without posts
+    const dateMap = new Map<string, number>();
+    dailyAggregate.forEach((item) => {
+      dateMap.set(item._id, item.count);
+    });
+
+    const dailyPostStats: Array<{ date: string; count: number; label: string; weekday: string }> = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const count = dateMap.get(dateStr) || 0;
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+      dailyPostStats.push({ date: dateStr, count, label, weekday });
+    }
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -35,6 +77,8 @@ export const getAdminStats = async (
         activePosts,
         bookedPosts,
         areaBreakdown,
+        dailyPostStats,
+        autoPurgeDays: 60,
       },
     });
   } catch (error) {
@@ -135,14 +179,21 @@ export const deleteUser = async (
       return next(new ApiError(404, 'User not found.'));
     }
 
-    // Delete user's posts
+    // Find and delete all posts authored by this user, including their Cloudinary media
+    const userPosts = await Post.find({ author: userId });
+    for (const post of userPosts) {
+      if (post.media) {
+        await deleteMediaFromCloudinary(post.media);
+      }
+    }
+
     await Post.deleteMany({ author: userId });
     await User.findByIdAndDelete(userId);
 
     return sendResponse({
       res,
       statusCode: 200,
-      message: 'User and all their posts have been deleted.',
+      message: 'User and all their posts and Cloudinary assets have been permanently deleted.',
     });
   } catch (error) {
     return next(error);
@@ -162,16 +213,9 @@ export const deleteAnyPost = async (
       return next(new ApiError(404, 'Post not found.'));
     }
 
-    // Purge media from Cloudinary
-    if (post.media?.images?.length) {
-      post.media.images.forEach((img) => {
-        cloudinary.uploader.destroy(img.publicId).catch(() => {});
-      });
-    }
-    if (post.media?.video?.publicId) {
-      cloudinary.uploader
-        .destroy(post.media.video.publicId, { resource_type: 'video' })
-        .catch(() => {});
+    // Purge media safely from Cloudinary
+    if (post.media) {
+      await deleteMediaFromCloudinary(post.media);
     }
 
     await Post.findByIdAndDelete(postId);
@@ -179,7 +223,30 @@ export const deleteAnyPost = async (
     return sendResponse({
       res,
       statusCode: 200,
-      message: 'Post deleted by Admin successfully.',
+      message: 'Post and associated Cloudinary assets deleted by Admin successfully.',
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Manually trigger or test the 60-day expired posts auto-cleanup
+ */
+export const triggerExpiredPostsCleanup = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const days = Number(req.body?.days) || 60;
+    const result = await cleanupExpiredPosts(days);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      message: result.message,
+      data: result,
     });
   } catch (error) {
     return next(error);

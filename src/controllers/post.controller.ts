@@ -4,6 +4,7 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 import { sendResponse } from '../utils/apiResponse';
 import { ApiError } from '../utils/apiError';
 import cloudinary from '../config/cloudinary';
+import { deleteMediaFromCloudinary } from '../utils/cloudinaryCleanup';
 
 export const createPost = async (
   req: AuthRequest,
@@ -337,16 +338,9 @@ export const deletePost = async (
       );
     }
 
-    // Delete media assets from Cloudinary in background
-    if (post.media?.images?.length) {
-      post.media.images.forEach((img) => {
-        cloudinary.uploader.destroy(img.publicId).catch(() => {});
-      });
-    }
-    if (post.media?.video?.publicId) {
-      cloudinary.uploader
-        .destroy(post.media.video.publicId, { resource_type: 'video' })
-        .catch(() => {});
+    // Robustly delete all media assets (images + video) from Cloudinary
+    if (post.media) {
+      await deleteMediaFromCloudinary(post.media);
     }
 
     await Post.findByIdAndDelete(id);
