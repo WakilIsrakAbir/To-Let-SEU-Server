@@ -63,9 +63,9 @@ export const register = async (
     const { name, email, password, phone, department, studentId } = req.body;
     const normalizedEmail = email.toLowerCase().trim();
 
-    if (!normalizedEmail.endsWith('@gmail.com')) {
+    if (!normalizedEmail.endsWith('@gmail.com') && !normalizedEmail.endsWith('@seu.edu.bd')) {
       return next(
-        new ApiError(400, 'Only valid @gmail.com accounts are permitted to register.')
+        new ApiError(400, 'Only valid @seu.edu.bd and @gmail.com accounts are permitted to register.')
       );
     }
 
@@ -153,9 +153,9 @@ export const googleLogin = async (
     const { email, name, avatarUrl, googleId, department, studentId, phone } = req.body;
     const normalizedEmail = (email || '').toLowerCase().trim();
 
-    if (!normalizedEmail.endsWith('@gmail.com')) {
+    if (!normalizedEmail.endsWith('@gmail.com') && !normalizedEmail.endsWith('@seu.edu.bd')) {
       return next(
-        new ApiError(400, 'Only valid @gmail.com accounts are permitted.')
+        new ApiError(400, 'Only valid @seu.edu.bd and @gmail.com accounts are permitted.')
       );
     }
 

@@ -35,8 +35,8 @@ const UserSchema = new Schema<IUserDocument>(
       lowercase: true,
       trim: true,
       match: [
-        /^[a-zA-Z0-9._%+-]+@gmail\.com$/i,
-        'Only valid @gmail.com accounts are permitted',
+        /^[a-zA-Z0-9._%+-]+@(gmail\.com|seu\.edu\.bd)$/i,
+        'Only valid @seu.edu.bd and @gmail.com accounts are permitted',
       ],
     },
     password: {

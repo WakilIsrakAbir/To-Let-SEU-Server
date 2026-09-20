@@ -35,7 +35,7 @@ const basePostFields = {
       'Master Bed',
     ])
     .optional()
-    .default('2 Person Room'),
+    .default('Single Room'),
 
   description: z.string().optional().default(''),
 
