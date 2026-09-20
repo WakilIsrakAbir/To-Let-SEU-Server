@@ -56,7 +56,6 @@ export const getPosts = async (
       gender,
       minRent,
       maxRent,
-      isNegotiable,
       month,
       roomType,
       amenities,
@@ -123,10 +122,6 @@ export const getPosts = async (
       filterQuery.rentAmount = {};
       if (minRent) filterQuery.rentAmount.$gte = Number(minRent);
       if (maxRent) filterQuery.rentAmount.$lte = Number(maxRent);
-    }
-
-    if (isNegotiable === 'true') {
-      filterQuery.rentType = 'negotiable';
     }
 
     // Month filter
