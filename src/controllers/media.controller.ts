@@ -7,9 +7,14 @@ import { ApiError } from '../utils/apiError';
 export const getUploadSignature = (
   req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ) => {
   const folderOrType = (req.query.type as string) || (req.query.folder as string) || 'image';
+
+  if (folderOrType === 'video') {
+    return next(new ApiError(400, 'Video uploads are disabled to conserve cloud storage.'));
+  }
+
   const signData = generateUploadSignature(folderOrType);
 
   return sendResponse({

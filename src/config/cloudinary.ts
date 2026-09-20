@@ -16,10 +16,8 @@ export const CLOUDINARY_FOLDERS = {
 } as const;
 
 export const CLOUDINARY_LIMITS = {
-  MAX_IMAGE_SIZE_BYTES: 10 * 1024 * 1024, // 10MB
-  MAX_VIDEO_SIZE_BYTES: 100 * 1024 * 1024, // 100MB
+  MAX_IMAGE_SIZE_BYTES: 10 * 1024 * 1024, // 10MB raw limit (compressed WebP is < 500KB)
   MAX_IMAGES_COUNT: 5,
-  MAX_VIDEO_COUNT: 1,
 };
 
 export const generateUploadSignature = (

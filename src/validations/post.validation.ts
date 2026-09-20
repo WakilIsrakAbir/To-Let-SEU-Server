@@ -85,15 +85,6 @@ export const createPostSchema = z.object(basePostFields).refine(
     return !exceedsImage;
   },
   { message: 'One or more images exceed the maximum allowed size of 10MB' }
-).refine(
-  (m) => {
-    if (!m?.media?.video) return true;
-    if (m.media.video.sizeBytes && m.media.video.sizeBytes > 100 * 1024 * 1024) {
-      return false;
-    }
-    return true;
-  },
-  { message: 'Video exceeds the maximum allowed size of 100MB' }
 );
 
 export const updatePostSchema = z
