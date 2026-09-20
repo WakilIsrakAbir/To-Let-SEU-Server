@@ -3,6 +3,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { ENV } from './config/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { sendResponse } from './utils/apiResponse';
@@ -14,7 +16,12 @@ import { checkAndRunDailyCleanup } from './services/autoCleanup.service';
 
 const app: Application = express();
 
-// Middlewares
+// 1. Security Headers via Helmet
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+// 2. Strict CORS Configuration
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -24,7 +31,8 @@ app.use(
         normalizedClient,
         'http://localhost:3000',
         'http://localhost:3001',
-      ];
+      ].filter(Boolean);
+
       if (
         allowedOrigins.includes(origin) ||
         origin.endsWith('.vercel.app') ||
@@ -32,13 +40,39 @@ app.use(
       ) {
         return callback(null, true);
       }
-      return callback(null, true);
+      return callback(new Error('Blocked by CORS policy: Origin not allowed.'));
     },
     credentials: true,
   })
 );
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// 3. Rate Limiting Protection (Anti Brute-Force & Anti DoS)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // max 300 requests per 15 minutes per IP
+  message: {
+    success: false,
+    message: 'Too many requests from this IP address. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // max 20 login/register attempts per 15 minutes per IP
+  message: {
+    success: false,
+    message: 'Too many authentication attempts. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(globalLimiter);
+
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(cookieParser());
 
 // Non-blocking daily auto-cleanup check (runs at most once every 24 hours)
@@ -89,7 +123,7 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
 });
 
 // Mount Routes
-app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/posts', postRoutes);
 app.use('/api/v1/media', mediaRoutes);
 app.use('/api/v1/admin', adminRoutes);

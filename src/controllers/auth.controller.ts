@@ -61,27 +61,37 @@ export const register = async (
 ) => {
   try {
     const { name, email, password, phone, department, studentId } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (!normalizedEmail.endsWith('@gmail.com')) {
+      return next(
+        new ApiError(400, 'Only valid @gmail.com accounts are permitted to register.')
+      );
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return next(
         new ApiError(409, 'An account with this email address already exists.')
       );
     }
 
-    // First registered user gets Admin role, others default to 'user'
+    // Role: Check if listed in ADMIN_EMAILS whitelist, else fallback to first user
     const totalUsers = await User.countDocuments();
-    const role = totalUsers === 0 ? 'admin' : 'user';
+    const isAdmin =
+      ENV.ADMIN_EMAILS.includes(normalizedEmail) || totalUsers === 0;
+    const role = isAdmin ? 'admin' : 'user';
 
     const user = await User.create({
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       password,
       phone,
       department,
       studentId,
       role,
-      isVerifiedStudent: !!studentId, // Automatically mark verified if student ID given
+      authProvider: 'local',
+      isVerifiedStudent: !!studentId,
     });
 
     return sendTokenResponse(user, 201, res, 'Account registered successfully.');
@@ -97,13 +107,24 @@ export const login = async (
 ) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select(
+    const user = await User.findOne({ email: normalizedEmail }).select(
       '+password'
     );
 
     if (!user) {
       return next(new ApiError(401, 'Invalid email or password.'));
+    }
+
+    // If user has no password and used Google Auth
+    if (!user.password && user.authProvider === 'google') {
+      return next(
+        new ApiError(
+          400,
+          'This account is registered via Google. Please use "Continue with Google" to sign in.'
+        )
+      );
     }
 
     const isMatch = await user.comparePassword(password);
@@ -118,6 +139,76 @@ export const login = async (
     }
 
     return sendTokenResponse(user, 200, res, 'Logged in successfully.');
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const googleLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email, name, avatarUrl, googleId, department, studentId, phone } = req.body;
+    const normalizedEmail = (email || '').toLowerCase().trim();
+
+    if (!normalizedEmail.endsWith('@gmail.com')) {
+      return next(
+        new ApiError(400, 'Only valid @gmail.com accounts are permitted.')
+      );
+    }
+
+    let user = await User.findOne({ email: normalizedEmail });
+
+    if (user) {
+      if (user.status === 'suspended') {
+        return next(
+          new ApiError(403, 'Your account is suspended. Contact administrator.')
+        );
+      }
+
+      // Check if user should have admin role based on whitelist
+      if (user.role !== 'admin' && ENV.ADMIN_EMAILS.includes(normalizedEmail)) {
+        user.role = 'admin';
+      }
+
+      // Update avatar or Google ID if newly available
+      if (avatarUrl && (!user.avatarUrl || user.avatarUrl.includes('cld-sample'))) {
+        user.avatarUrl = avatarUrl;
+      }
+      if (googleId && !user.googleId) {
+        user.googleId = googleId;
+      }
+      await user.save();
+
+      return sendTokenResponse(user, 200, res, 'Logged in with Google successfully.');
+    }
+
+    // Create new Google-authenticated student account
+    const totalUsers = await User.countDocuments();
+    const isAdmin =
+      ENV.ADMIN_EMAILS.includes(normalizedEmail) || totalUsers === 0;
+
+    user = await User.create({
+      name: name || normalizedEmail.split('@')[0],
+      email: normalizedEmail,
+      avatarUrl: avatarUrl || undefined,
+      googleId: googleId || '',
+      authProvider: 'google',
+      department: department || 'CSE',
+      phone: phone || '',
+      studentId: studentId || '',
+      isVerifiedStudent: !!studentId,
+      role: isAdmin ? 'admin' : 'user',
+    });
+
+    return sendTokenResponse(
+      user,
+      201,
+      res,
+      'Welcome to To Let SEU! Account created with Google.'
+    );
   } catch (error) {
     return next(error);
   }

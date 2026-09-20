@@ -13,6 +13,8 @@ export interface IUserDocument extends Document {
   avatarUrl: string;
   role: UserRole;
   isVerifiedStudent: boolean;
+  authProvider: 'local' | 'google';
+  googleId?: string;
   status: 'active' | 'suspended';
   createdAt: Date;
   updatedAt: Date;
@@ -32,16 +34,22 @@ const UserSchema = new Schema<IUserDocument>(
       unique: true,
       lowercase: true,
       trim: true,
+      match: [
+        /^[a-zA-Z0-9._%+-]+@gmail\.com$/i,
+        'Only valid @gmail.com accounts are permitted',
+      ],
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: function (this: IUserDocument) {
+        return this.authProvider === 'local';
+      },
       minlength: [6, 'Password must be at least 6 characters'],
       select: false,
     },
     phone: {
       type: String,
-      required: [true, 'Contact phone number is required'],
+      default: '',
       trim: true,
     },
     department: {
@@ -77,6 +85,15 @@ const UserSchema = new Schema<IUserDocument>(
     isVerifiedStudent: {
       type: Boolean,
       default: false,
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    googleId: {
+      type: String,
+      default: '',
     },
     status: {
       type: String,
