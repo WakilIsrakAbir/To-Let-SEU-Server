@@ -5,6 +5,7 @@ import { sendResponse } from '../utils/apiResponse';
 import { ApiError } from '../utils/apiError';
 import { deleteMediaFromCloudinary } from '../utils/cloudinaryCleanup';
 import { cleanupExpiredPosts } from '../services/autoCleanup.service';
+import { clearPostCache } from './post.controller';
 
 export const getAdminStats = async (
   _req: Request,
@@ -190,6 +191,8 @@ export const deleteUser = async (
     await Post.deleteMany({ author: userId });
     await User.findByIdAndDelete(userId);
 
+    clearPostCache();
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -219,6 +222,8 @@ export const deleteAnyPost = async (
     }
 
     await Post.findByIdAndDelete(postId);
+
+    clearPostCache();
 
     return sendResponse({
       res,

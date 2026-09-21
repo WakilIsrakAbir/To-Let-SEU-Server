@@ -6,6 +6,19 @@ import { ApiError } from '../utils/apiError';
 import cloudinary from '../config/cloudinary';
 import { deleteMediaFromCloudinary } from '../utils/cloudinaryCleanup';
 
+// High-performance in-memory cache for fast response times (<10ms)
+interface CacheEntry {
+  data: any;
+  expiry: number;
+}
+
+const postCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 45 * 1000; // 45 seconds TTL
+
+export const clearPostCache = () => {
+  postCache.clear();
+};
+
 export const createPost = async (
   req: AuthRequest,
   res: Response,
@@ -18,21 +31,26 @@ export const createPost = async (
 
     const postData = {
       ...req.body,
-      title: req.body.title?.trim() || 'Bachelor Seat / Room',
+      title: req.body.title?.trim() || `${req.body.gender || 'Bachelor'} ${req.body.roomType || 'Seat'} in ${req.body.area || 'SEU Area'}`,
       department: req.body.department || req.user.department || 'General',
       contactNumber: req.body.contactNumber || req.user.phone || 'N/A',
-      area: req.body.area || 'Tejgaon (Near SEU Campus)',
+      whatsappNumber: req.body.whatsappNumber || req.body.contactNumber || req.user.phone,
+      area: req.body.area,
       addressDetails: req.body.addressDetails || 'Near Campus Area',
       rentAmount: Number(req.body.rentAmount) || 0,
       seatCount: Number(req.body.seatCount) || 1,
-      gender: req.body.gender || 'Male',
-      availableFromMonth: req.body.availableFromMonth || 'Immediate',
+      gender: req.body.gender,
+      availableFromMonth: req.body.availableFromMonth,
+      roomType: req.body.roomType,
       description: req.body.description || '',
       author: req.user._id,
     };
 
     const post = await Post.create(postData);
     await post.populate('author', 'name email department avatarUrl phone isVerifiedStudent');
+
+    // Invalidate cached post lists so the new post appears immediately
+    clearPostCache();
 
     return sendResponse({
       res,
@@ -51,6 +69,20 @@ export const getPosts = async (
   next: NextFunction
 ) => {
   try {
+    // 1. Check in-memory cache for instant response (<10ms)
+    const cacheKey = req.originalUrl || req.url;
+    const cachedEntry = postCache.get(cacheKey);
+    if (cachedEntry && Date.now() < cachedEntry.expiry) {
+      res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+      res.setHeader('X-Cache', 'HIT');
+      return sendResponse({
+        res,
+        statusCode: 200,
+        message: 'Rental posts retrieved successfully.',
+        data: cachedEntry.data,
+      });
+    }
+
     const {
       area,
       gender,
@@ -74,15 +106,25 @@ export const getPosts = async (
       const specificAreas = areaList.filter((a) => a.toLowerCase() !== 'other');
 
       const STANDARD_CAMPUS_AREAS = [
-        'Tejgaon',
+        'East Nakhalpara',
+        'West Nakhalpara',
         'Mohakhali',
         'Banani',
-        'Nakhalpara',
+        'Begunbari',
+        'Kunipara',
+        'Modhubag',
+        'Mogbazar',
+        'Niketon',
+        'Niketon Bazar Gate',
         'Farmgate',
         'Bijoy Sarani',
-        'Monipuripara',
         'Panthapath',
+        'Rampura',
+        'Badda',
         'Mirpur',
+        'Uttara',
+        'Khilkhet',
+        'Nikunja',
       ];
 
       const orBranches: any[] = [];
@@ -191,23 +233,36 @@ export const getPosts = async (
 
     const totalPages = Math.ceil(totalPosts / limitNum);
 
-    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
+    const responsePayload = {
+      posts,
+      pagination: {
+        totalPosts,
+        totalPages,
+        currentPage: pageNum,
+        limit: limitNum,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
+      },
+    };
+
+    // Store in in-memory cache (prune if exceeds 150 items to keep RAM low)
+    if (postCache.size > 150) {
+      postCache.clear();
+    }
+    postCache.set(cacheKey, {
+      data: responsePayload,
+      expiry: Date.now() + CACHE_TTL_MS,
+    });
+
+    // Vercel Edge Network will cache this at the Edge CDN for 30s
+    res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+    res.setHeader('X-Cache', 'MISS');
 
     return sendResponse({
       res,
       statusCode: 200,
       message: 'Rental posts retrieved successfully.',
-      data: {
-        posts,
-        pagination: {
-          totalPosts,
-          totalPages,
-          currentPage: pageNum,
-          limit: limitNum,
-          hasNextPage: pageNum < totalPages,
-          hasPrevPage: pageNum > 1,
-        },
-      },
+      data: responsePayload,
     });
   } catch (error) {
     return next(error);
@@ -299,6 +354,9 @@ export const updatePost = async (
       runValidators: true,
     }).populate('author', 'name email department avatarUrl phone isVerifiedStudent');
 
+    // Invalidate cached post lists
+    clearPostCache();
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -343,10 +401,13 @@ export const deletePost = async (
 
     await Post.findByIdAndDelete(id);
 
+    // Invalidate cached post lists
+    clearPostCache();
+
     return sendResponse({
       res,
       statusCode: 200,
-      message: 'Rental post and associated media deleted successfully.',
+      message: 'Rental posts and associated media deleted successfully.',
     });
   } catch (error) {
     return next(error);

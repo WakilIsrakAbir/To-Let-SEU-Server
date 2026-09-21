@@ -87,7 +87,8 @@ const PostSchema = new Schema<IPostDocument>(
     },
     whatsappNumber: {
       type: String,
-      default: '',
+      required: [true, 'WhatsApp number is required'],
+      trim: true,
     },
     area: {
       type: String,
@@ -195,7 +196,11 @@ const PostSchema = new Schema<IPostDocument>(
 
 // Indexes for fast searching, sorting and filtering
 PostSchema.index({ status: 1, createdAt: -1 });
-PostSchema.index({ status: 1, area: 1 });
+PostSchema.index({ status: 1, rentAmount: 1 });
+PostSchema.index({ status: 1, rentAmount: -1 });
+PostSchema.index({ status: 1, viewsCount: -1 });
+PostSchema.index({ status: 1, gender: 1, createdAt: -1 });
+PostSchema.index({ status: 1, area: 1, createdAt: -1 });
 PostSchema.index({ author: 1 });
 PostSchema.index({ area: 1, gender: 1, rentAmount: 1, createdAt: -1 });
 PostSchema.index({ title: 'text', description: 'text', area: 'text' });

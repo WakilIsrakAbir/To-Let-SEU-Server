@@ -10,32 +10,30 @@ const mediaItemSchema = z
   .optional();
 
 const basePostFields = {
-  title: z.string().optional().default('Bachelor Seat / Room'),
-  department: z.string().optional().default('General'),
-  contactNumber: z.string().optional().default('N/A'),
-  whatsappNumber: z.string().optional().default(''),
-  area: z.string().optional().default('Tejgaon (Near SEU Campus)'),
+  title: z.string().optional(),
+  department: z.string({ required_error: 'SEU Department is required' }).min(1, 'SEU Department is required'),
+  contactNumber: z.string({ required_error: 'Contact phone is required' }).min(1, 'Contact phone is required'),
+  whatsappNumber: z.string({ required_error: 'WhatsApp number is required' }).min(1, 'WhatsApp number is required'),
+  area: z.string({ required_error: 'Area is required' }).min(1, 'Area is required'),
   addressDetails: z.string().optional().default('Near Campus Area'),
   distanceFromCampus: z.string().optional().default(''),
 
   rentType: z.enum(['fixed', 'negotiable']).optional().default('fixed'),
-  rentAmount: z.number().optional().default(0),
+  rentAmount: z.coerce.number({ required_error: 'Rent amount is required' }).min(1, 'Rent amount must be greater than 0'),
   serviceChargeIncluded: z.boolean().optional().default(false),
 
-  gender: z.enum(['Male', 'Female']).optional().default('Male'),
-  availableFromMonth: z.string().optional().default('Immediate'),
-  seatCount: z.number().optional().default(1),
+  gender: z.enum(['Male', 'Female'], { required_error: 'Gender is required' }),
+  availableFromMonth: z.string({ required_error: 'Available from month is required' }).min(1, 'Available month is required'),
+  seatCount: z.coerce.number({ required_error: 'Seat count is required' }).min(1, 'At least 1 seat must be offered'),
   roomType: z
     .enum([
+      'Single Room',
       '2 Person Room',
       '3 Person Room',
-      'Single Room',
       'Sublet',
       'Shared Seat',
       'Master Bed',
-    ])
-    .optional()
-    .default('Single Room'),
+    ], { required_error: 'Room type is required' }),
 
   description: z.string().optional().default(''),
 
